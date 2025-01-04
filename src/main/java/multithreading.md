@@ -5,6 +5,7 @@
 3. How can we create a Thread in Java?
 4. What is synchronization, and why is it important?
 5. What are the different states of a thread in Java?
+6. What is the difference between synchronized and volatile keywords in Java?
 6. What is ThreadLocal in java?
 7. What is the difference between Thread class and Runnable interface?
 8. How can you create a thread-safe singleton in Java?
@@ -113,8 +114,48 @@ During its lifetime, a thread can be in the following states:
 3. WAITING: a thread enters this state if it waits for another thread to perform a particular action. For instance, a thread enters this state upon calling the Object.wait() method on a monitor it holds, or the Thread.join() method on another thread
 4. TIMED WAITING :  same as the above, but a thread enters this state after calling timed versions of Thread.sleep(), Object.wait(), Thread.join() and some other methods
 5. BLOCKED :  A thread is in the Blocked state when it is trying to acquire a lock but another thread holds that lock. The thread will remain in this state until it can acquire the lock.
-6. DEAD OR TERMINATED : A thread is in the Terminated state when it has completed its execution, either normally (after the run() method finishes) or abruptly (due to an exception).
+6. TERMINATED : A thread is in the Terminated state when it has completed its execution, either normally (after the run() method finishes) or abruptly (due to an exception).
 
+Programmatically identifying thread states:
+
+You can programmatically identify the state of a thread using the getState() method of the Thread class. This method returns a Thread.State enum constant representing the current state of the thread.
+
+```java
+public class ThreadStateExample {
+    public static void main(String[] args) throws InterruptedException {
+        Thread myThread = new Thread(() -> {
+            try {
+                Thread.sleep(5000); // Simulate some work
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
+
+        System.out.println("Thread state before start: " + myThread.getState()); // Output: NEW
+
+        myThread.start();
+        System.out.println("Thread state after start: " + myThread.getState()); // Output: RUNNABLE
+
+        Thread.sleep(1000);
+        System.out.println("Thread state after sleeping for a while: " + myThread.getState()); // Output: TIMED_WAITING
+
+        myThread.join(); // Wait for the thread to finish
+        System.out.println("Thread state after join: " + myThread.getState()); // Output: TERMINATED
+    }
+}
+
+// op
+
+/*
+Thread state before start: NEW
+Thread state after start: RUNNABLE
+Thread state after sleeping for a while: TIMED_WAITING
+Thread state after join: TERMINATED
+
+Process finished with exit code 0
+ * 
+ * */
+```
 ## 5. Difference between Runnable and callable
 
 In Java, both Runnable and Callable are interfaces designed for defining tasks that can be executed by threads, but they have some key differences.
@@ -169,6 +210,40 @@ Integer result = future.get(); // Retrieves the result
 System.out.println("Result from Callable: " + result);
 executor.shutdown();
 ```
+## What is the difference between synchronized and volatile keywords in Java?
+
+synchronized:
+
+Purpose: Primarily used for controlling access to shared resources and preventing race conditions. It ensures that only one thread can execute a synchronized block or method at a time, providing mutual exclusion.  
+
+Mechanism: Uses intrinsic locks (monitors) associated with objects. When a thread enters a synchronized block or method, it acquires the lock. Other threads attempting to acquire the same lock will be blocked until the first thread releases it.  
+
+Visibility: Ensures visibility of changes to shared variables across threads. When a thread exits a synchronized block, it flushes its changes to main memory. When a thread enters a synchronized block, it reads the latest values from main memory. This is a side effect of locking, not its primary purpose.
+
+Atomicity: Provides atomicity for the synchronized block or method. Operations within the synchronized block are treated as a single, indivisible unit.
+
+Performance: Can have a performance overhead due to lock contention and context switching.  
+
+Usage: Can be applied to methods (instance and static) and blocks of code.   
+
+volatile:
+
+Purpose: Primarily used to ensure visibility of changes to a shared variable across threads. It tells the JVM that the variable may be modified by multiple threads, and therefore, it should not cache the variable's value in thread-local memory.  
+
+Mechanism: Works by instructing the JVM to read the variable's value directly from main memory and write changes directly back to main memory, bypassing the CPU cache. This ensures that all threads see the most up-to-date value.  
+
+Visibility: Guarantees visibility of changes to the volatile variable. Any write to a volatile variable by one thread is immediately visible to all other threads.  
+
+Atomicity: Does not provide atomicity for compound operations (e.g., incrementing a variable: count++ is not atomic). It only guarantees atomicity for simple reads and writes of the variable itself.
+
+Performance: Generally has lower overhead than synchronized because it avoids locking.
+
+Usage: Can only be applied to instance and static variables.
+
+When to use which:
+
+Use synchronized when you need to protect a block of code or a method that performs multiple operations on shared data and requires atomicity. It is also necessary when you need to prevent race conditions involving complex state changes.
+Use volatile when you need to ensure visibility of a single shared variable across threads, and you don't need atomicity for compound operations. It is useful for simple flags or status indicators that are frequently read by multiple threads.
 
 ## 6. What is ThreadLocal in java?
 ThreadLocal is a class in Java that allows you to create variables that can only be read and written by the same thread. This can be useful in situations where you have multiple threads accessing the same variable, but you want to ensure that each thread has its own isolated copy of the variable
@@ -290,4 +365,49 @@ public class ThreadStopExample {
     }
 }
 ```
+
+# What is a thread pool, and why is it used?
+A thread pool is a collection of pre-created, reusable threads that can execute tasks concurrently. Instead of creating a new thread every time a task needs to run, the thread pool assigns one of its existing threads to handle the task. Once the task is completed, the thread is returned to the pool, ready for reuse.
+
+In Java, thread pools are part of the java.util.concurrent package and are managed by an ExecutorService, which provides methods to create and manage thread pools.
+
+Why is a Thread Pool Used?
+a. Reduces Thread Creation Overhead
+Creating a thread is resource-intensive. A thread pool avoids the cost of creating and destroying threads repeatedly by reusing existing threads.
+
+b. Controls Concurrency
+Thread pools allow you to limit the number of threads running concurrently, which helps prevent excessive resource consumption (like CPU or memory) and avoids problems like thread starvation or out-of-memory errors.
+
+c. Improves Performance
+Tasks are executed faster because threads are pre-created and ready for use, reducing the latency associated with thread creation.
+
+d. Simplifies Thread Management
+Developers don’t need to manage thread lifecycles (e.g., starting or stopping threads) manually. The thread pool abstracts these complexities, allowing you to focus on task execution.
+
+# Four types of thread pool in java
+
+1. Fixed Thread Pool : A pool with a fixed number of threads.
+   Suitable when the number of concurrent tasks is predictable.
+2. Cached Thread Pool : A pool with an unlimited number of threads, which dynamically grows or shrinks based on the workload.
+   Suitable for short-lived, lightweight tasks.
+3. Scheduled Thread Pool : A pool for scheduling tasks to run after a delay or at fixed intervals.
+4. Single Thread Executor : A pool with a single thread that executes tasks sequentially.
+   Useful when tasks must be executed in order.
+
+```java
+ExecutorService executor = Executors.newFixedThreadPool(5);
+
+ExecutorService executor = Executors.newCachedThreadPool();
+
+ExecutorService executor = Executors.newSingleThreadExecutor();
+
+ScheduledExecutorService executor = Executors.newScheduledThreadPool(2);
+executor.schedule(() -> {
+        System.out.println("Task executed after delay");
+}, 2, TimeUnit.SECONDS);
+executor.shutdown();
+
+```
+
+
 3. what is deadlock

@@ -50,6 +50,22 @@ public class Java8Code {
         System.out.println(sum);
         System.out.println(average.getAsDouble());
 
+        List<Integer> arrayList = new ArrayList<>();
+        arrayList.add(1);
+        arrayList.add(2);
+        arrayList.add(3);
+        arrayList.add(4);
+        arrayList.add(5);
+
+        // Convert ArrayList to int array
+        int[] array = arrayList.stream().mapToInt(Integer::intValue).toArray();
+
+        // Print the array elements
+        for (int element : array) {
+            System.out.println(element);
+        }
+
+
     }
 }
 
