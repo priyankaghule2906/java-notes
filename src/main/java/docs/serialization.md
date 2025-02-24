@@ -207,9 +207,11 @@ Mark member variables as static or transient, and those member variables will no
 
 ## 7. What is the use of serialVersionUID?
 
-When working with serialized data on different JVMs we need to ensure and verify that both the sender and receiver of the serialized objects have loaded the classes for that object that are compatible with respect to the serialization. serialVersionUID is used for this verification process.
+When working with serialized data on different JVMs we need to ensure and verify that both the sender and receiver of the serialized objects have loaded the classes for that object that are compatible with respect to the serialization.
+serialVersionUID is used for this verification process.
 
-During object serialization, the default Java serialization mechanism writes the metadata about the object, which includes the class name, field names, types, and superclass. This class definition is stored as a part of the serialized object. This stored metadata enables the deserialization process to reconstitute the objects and map the stream data into the class attributes with the appropriate type.
+During object serialization, the default Java serialization mechanism writes the metadata about the object, which includes the class name, field names, types, and superclass. 
+This class definition is stored as a part of the serialized object. This stored metadata enables the deserialization process to reconstitute the objects and map the stream data into the class attributes with the appropriate type.
 
 Every time an object is serialized the java serialization mechanism automatically computes a hash value. ObjectStreamClass’s computeSerialVersionUID() method passes the class name, sorted member names, modifiers, and interfaces to the secure hash algorithm (SHA), which returns a hash value called serialVersionUID or suid.
 
@@ -237,7 +239,7 @@ InCompatible Changes :  InCompatible changes are those changes which affect deSe
 2. Changing a nonstatic field to static or  non transient field to transient field. - it’s equal to deletion of fields.
 3. Modifying the writeObject() / readObject() method - we must not modify these method, though adding or removing them completely is compatible change.
 
-## 11.  What if Serialization is not available, is any any other alternative way to transfer object over network
+## 11.  What if Serialization is not available, is  any other alternative way to transfer object over network
 
 * We can can convert JSON to transfer the object. JSON is helpful in stringifying and de stringifying object.
 * Hibernate (ORM tool) helps in persisting object as it in database and later we can read persisted object.

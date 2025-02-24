@@ -295,7 +295,9 @@ public class Singleton {
 
 ## MultiThreading Concepts
 ### 1. What is Volatile
-Volatile is a modifier used with variables including both primitive and object reference. The volatile keyword is used to indicate that a variable's value will be modified by different threads. Declaring a variable as volatile ensures that any read or write to that variable is directly done from the main memory, rather than from a thread's local cache. This guarantees visibility of changes across threads.
+Volatile is a modifier used with variables including both primitive and object reference. The volatile keyword is used to indicate that a variable's value will be modified by different threads.
+Declaring a variable as volatile ensures that any read or write to that variable is directly done from the main memory, rather than from a thread's local cache.
+This guarantees visibility of changes across threads.
 
 ```java
 private volatile boolean running = true;
@@ -409,5 +411,319 @@ executor.shutdown();
 
 ```
 
+difference between  ReentrantLock and synchronized
+
+1) difference between ReentrantLock and the synchronized keyword is fairness. The synchronized keyword doesn't support fairness. Any thread can acquire lock once released, no preference can be specified, on the other hand, you can make ReentrantLock fair by specifying fairness property while creating an instance of ReentrantLock. Fairness property provides a lock to the longest waiting thread, in case of contention.
+
+2) The second difference between synchronized and Reentrant lock is tryLock() method. ReentrantLock provides a convenient tryLock() method, which acquires lock only if its available or not held by any other thread. This reduces the blocking of thread waiting for lock-in Java applications.
+
+3) One more worth noting the difference between ReentrantLock and synchronized keyword in Java is, the ability to interrupt Thread while waiting for Lock.
+
+In case of a synchronized keyword, a thread can be blocked waiting for a lock, for an indefinite period of time and there was no way to control that.
+
+ReentrantLock provides a method called lockInterruptibly(), which can be used to interrupt thread when it is waiting for lock. Similarly, tryLock() with timeout can be used to timeout if the lock is not available in certain time period.
+
+4) ReentrantLock also provides convenient method to get List of all threads waiting for lock.
+
+
+
 
 3. what is deadlock
+
+A deadlock is a situation in which two or more threads are blocked forever, waiting for each other to release resources. 
+This happens when multiple threads hold some resources and wait for others, leading to a circular wait condition.
+
+## Example of Deadlock in Java
+Here’s a simple Java example that demonstrates a deadlock:
+```java
+class Resource {
+    private final String name;
+
+    public Resource(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+}
+
+class DeadlockExample {
+    public static void main(String[] args) {
+        Resource resource1 = new Resource("Resource1");
+        Resource resource2 = new Resource("Resource2");
+
+        Thread thread1 = new Thread(() -> {
+            synchronized (resource1) {
+                System.out.println("Thread 1 locked " + resource1.getName());
+
+                // Simulating some work
+                try { Thread.sleep(100); } catch (InterruptedException e) {}
+
+                synchronized (resource2) {
+                    System.out.println("Thread 1 locked " + resource2.getName());
+                }
+            }
+        });
+
+        Thread thread2 = new Thread(() -> {
+            synchronized (resource2) {
+                System.out.println("Thread 2 locked " + resource2.getName());
+
+                // Simulating some work
+                try { Thread.sleep(100); } catch (InterruptedException e) {}
+
+                synchronized (resource1) {
+                    System.out.println("Thread 2 locked " + resource1.getName());
+                }
+            }
+        });
+
+        thread1.start();
+        thread2.start();
+    }
+}
+
+```
+```text
+Thread 1 locks resource1 and then tries to lock resource2, but resource2 is already held by Thread 2.
+Thread 2 locks resource2 and then tries to lock resource1, but resource1 is already held by Thread 1.
+Both threads keep waiting for each other to release resources, causing a deadlock.
+```
+## How to Prevent Deadlocks?
+1. Lock Ordering: Always acquire locks in the same order
+```java
+synchronized (resource1) {
+    synchronized (resource2) {
+        // Work
+    }
+}
+
+```
+2. Try-Lock Mechanism (Using ReentrantLock)
+
+```java
+boolean locked = lock1.tryLock();
+if (locked) {
+    try {
+        if (lock2.tryLock()) {
+            try {
+                // Work
+            } finally {
+                lock2.unlock();
+            }
+        }
+    } finally {
+        lock1.unlock();
+    }
+}
+
+```
+3. Timeouts in Locking: Use tryLock(timeout, TimeUnit.SECONDS) instead of lock().
+
+# What is a Race Condition?
+A race condition occurs when multiple threads access and modify a shared resource concurrently, leading to unexpected or inconsistent results. This happens when the execution order of threads affects the outcome.
+
+Example of Race Condition in Java
+Let’s look at a scenario where two threads increment a shared counter:
+
+```java
+class SharedCounter {
+    private int count = 0;
+
+    public void increment() {
+        count++;  // Not thread-safe!
+    }
+
+    public int getCount() {
+        return count;
+    }
+}
+
+public class RaceConditionExample {
+    public static void main(String[] args) {
+        SharedCounter counter = new SharedCounter();
+
+        Runnable task = () -> {
+            for (int i = 0; i < 1000; i++) {
+                counter.increment();
+            }
+        };
+
+        Thread thread1 = new Thread(task);
+        Thread thread2 = new Thread(task);
+
+        thread1.start();
+        thread2.start();
+
+        try {
+            thread1.join();
+            thread2.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        System.out.println("Final Counter Value: " + counter.getCount());
+    }
+}
+
+```
+
+```text
+Expected vs. Actual Behavior
+Expected: The final counter value should be 2000.
+Actual: Due to a race condition, the output is often less than 2000 because both threads might read and update the count at the same time, overwriting each other’s changes.
+
+Why Does This Happen?
+The count++ operation is not atomic. It consists of three steps:
+
+Read the value of count.
+Increment the value.
+Store the incremented value back.
+If two threads execute these steps simultaneously, they might read the same old value before updating, leading to lost updates.
+```
+
+## How to Prevent Race Conditions?
+1. Use synchronized Keyword 
+2. Use AtomicInteger : AtomicInteger ensures atomic updates without requiring explicit synchronization.
+3. Use ReentrantLock
+
+# What is a CountDownLatch in Java?
+A CountDownLatch is a synchronization aid in Java’s java.util.concurrent package that blocks a set of threads until another set of operations is completed.
+
+It maintains a count, and once the count reaches zero, all waiting threads are released.
+Used in concurrent programming when you need one or multiple threads to wait for a certain number of tasks to complete before proceeding.
+
+## Example Scenario
+Imagine a race where multiple runners must wait for the starter to give the signal. The starter counts down from 3 (CountDownLatch), and when the count reaches zero, all runners start running.
+
+## Example of CountDownLatch
+```java
+import java.util.concurrent.CountDownLatch;
+
+class Worker extends Thread {
+    private CountDownLatch latch;
+
+    public Worker(CountDownLatch latch, String name) {
+        super(name);
+        this.latch = latch;
+    }
+
+    @Override
+    public void run() {
+        try {
+            System.out.println(getName() + " is working...");
+            Thread.sleep(2000); // Simulate some work
+            System.out.println(getName() + " finished work.");
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            latch.countDown(); // Decrease count
+        }
+    }
+}
+
+public class CountDownLatchExample {
+    public static void main(String[] args) throws InterruptedException {
+        int numberOfWorkers = 3;
+        CountDownLatch latch = new CountDownLatch(numberOfWorkers);
+
+        // Create and start worker threads
+        for (int i = 1; i <= numberOfWorkers; i++) {
+            new Worker(latch, "Worker-" + i).start();
+        }
+
+        // Main thread waits for all workers to finish
+        latch.await();
+        System.out.println("All workers finished. Main thread proceeds.");
+    }
+}
+
+/*
+ * Worker-1 is working...
+Worker-2 is working...
+Worker-3 is working...
+Worker-1 finished work.
+Worker-2 finished work.
+Worker-3 finished work.
+All workers finished. Main thread proceeds.
+
+ * */
+```
+
+How Does CountDownLatch Work?
+Initialize CountDownLatch with a count (e.g., new CountDownLatch(3)).
+Worker threads call countDown() when they complete their task.
+Main thread calls await() to block execution until the count reaches zero.
+Once the count reaches zero, all waiting threads are released.
+
+# What is a Semaphore in Java?
+A Semaphore is a concurrency control mechanism in Java’s java.util.concurrent package that restricts the number of threads that can access a resource at the same time.
+
+- It is often used to limit access to a critical section or resource (like a database connection pool or a file).
+- It maintains a permit count that determines how many threads can acquire access simultaneously.
+
+## Example Scenario
+Imagine a parking lot with 3 parking spots. Only 3 cars (threads) can park at a time. When one car leaves, another can enter.
+
+```java
+import java.util.concurrent.Semaphore;
+
+class ParkingLot {
+    private final Semaphore semaphore;
+
+    public ParkingLot(int slots) {
+        this.semaphore = new Semaphore(slots); // Allows only `slots` threads at a time
+    }
+
+    public void parkCar(String carName) {
+        try {
+            System.out.println(carName + " is trying to park.");
+            semaphore.acquire(); // Request a permit
+            System.out.println(carName + " has parked.");
+            Thread.sleep(2000); // Simulating parking time
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            System.out.println(carName + " is leaving.");
+            semaphore.release(); // Release permit
+        }
+    }
+}
+
+public class SemaphoreExample {
+    public static void main(String[] args) {
+        ParkingLot lot = new ParkingLot(3); // Only 3 cars can park at a time
+
+        Runnable car = () -> lot.parkCar(Thread.currentThread().getName());
+
+        for (int i = 1; i <= 6; i++) { // 6 cars trying to park
+            new Thread(car, "Car-" + i).start();
+        }
+    }
+}
+
+/*
+ * 
+ * Car-1 is trying to park.
+Car-2 is trying to park.
+Car-3 is trying to park.
+Car-1 has parked.
+Car-2 has parked.
+Car-3 has parked.
+Car-4 is trying to park.
+Car-5 is trying to park.
+Car-6 is trying to park.
+Car-1 is leaving.
+Car-4 has parked.
+Car-2 is leaving.
+Car-5 has parked.
+Car-3 is leaving.
+Car-6 has parked.
+Car-4 is leaving.
+Car-5 is leaving.
+Car-6 is leaving.
+* 
+* Here, only 3 cars can park at a time, while the rest wait.
+*/
+```

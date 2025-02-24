@@ -14,8 +14,7 @@
 11. What are Strings new methods introduced in Java 12?
 12. what are important string methods
 
-
-   
+  
 
 
 ## 1. What is string?
